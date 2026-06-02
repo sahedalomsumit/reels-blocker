@@ -161,7 +161,9 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher_foreground),
                     contentDescription = "App Icon",
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp))
                 )
             }
 
@@ -179,7 +181,7 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "You requested to block short-form feeds on $platformName.",
+                text = "Same content. Same loop. You've seen it all before on $platformName.",
                 color = Color(0xFF94A3B8), // Muted dark text
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
