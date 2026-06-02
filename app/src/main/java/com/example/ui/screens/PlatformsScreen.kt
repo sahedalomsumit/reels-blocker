@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.BlockerViewModel
+import com.example.ui.components.DisableBlockerDialog
 
 @Composable
 fun PlatformsScreen(
@@ -55,6 +57,19 @@ fun PlatformsScreen(
         PlatformDetails("YouTube", "Shorts", "com.google.android.youtube", false, Color(0xFFFF0000)),
         PlatformDetails("Snapchat", "Spotlight", "com.snapchat.android", false, Color(0xFFFFFC00))
     )
+
+    var platformToDisable by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<PlatformDetails?>(null) }
+
+    platformToDisable?.let { platform ->
+        DisableBlockerDialog(
+            isDark = isDark,
+            platformName = platform.name,
+            onDismiss = { platformToDisable = null },
+            onConfirmDisable = {
+                viewModel.togglePlatformBlock(platform.name.lowercase())
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -89,7 +104,13 @@ fun PlatformsScreen(
                 PlatformConfigRow(
                     p = p,
                     isDark = isDark,
-                    onToggle = { viewModel.togglePlatformBlock(p.name.lowercase()) }
+                    onToggle = { 
+                        if (p.enabled) {
+                            platformToDisable = p
+                        } else {
+                            viewModel.togglePlatformBlock(p.name.lowercase())
+                        }
+                    }
                 )
             }
         }

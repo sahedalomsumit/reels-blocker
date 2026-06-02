@@ -400,7 +400,7 @@ fun SettingsScreen(
                         } catch (e2: Exception) {}
                     }
                 }
-                SettingsPermissionRow("Notification Access", isNotificationGranted, isDark) {
+                SettingsPermissionRow("Notification Access (Optional)", isNotificationGranted, isDark) {
                     try {
                         val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                             putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
@@ -678,9 +678,10 @@ fun SettingsPermissionRow(title: String, isGranted: Boolean, isDark: Boolean, on
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
             )
+            val isOptional = title.contains("(Optional)", ignoreCase = true)
             Text(
-                text = if (isGranted) "Permission Granted" else "Required",
-                color = if (isGranted) Color(0xFF10B981) else Color(0xFFEF4444),
+                text = if (isGranted) "Permission Granted" else (if (isOptional) "Optional" else "Required"),
+                color = if (isGranted) Color(0xFF10B981) else (if (isOptional) Color(0xFF64748B) else Color(0xFFEF4444)),
                 fontSize = 12.sp
             )
         }

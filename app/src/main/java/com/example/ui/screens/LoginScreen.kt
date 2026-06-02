@@ -134,8 +134,6 @@ fun LoginScreen(
                         contentDescription = "Reels Blocker App Icon",
                         modifier = Modifier
                             .size(76.dp)
-                            .clip(CircleShape)
-                            .border(2.dp, Color(0xFF8B5CF6), CircleShape)
                     )
                 }
 

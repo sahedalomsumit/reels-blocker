@@ -51,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.UserSettings
 import com.example.ui.components.UserProfileAvatar
+import com.example.ui.components.DisableBlockerDialog
 import com.example.ui.BlockerViewModel
 import kotlinx.coroutines.launch
 
@@ -91,6 +93,19 @@ fun HomeScreen(
         label = "GlowOffset"
     )
 
+    var showDisableDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    if (showDisableDialog) {
+        DisableBlockerDialog(
+            isDark = settings.theme == "dark",
+            platformName = "Master Shield",
+            onDismiss = { showDisableDialog = false },
+            onConfirmDisable = {
+                viewModel.setBlockerEnabled(false)
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -111,7 +126,11 @@ fun HomeScreen(
         MasterToggleCard(
             settings = settings,
             onToggleEnabled = { isEnabled ->
-                viewModel.setBlockerEnabled(isEnabled)
+                if (!isEnabled) {
+                    showDisableDialog = true
+                } else {
+                    viewModel.setBlockerEnabled(true)
+                }
             },
             offsetAnim = borderOffset
         )

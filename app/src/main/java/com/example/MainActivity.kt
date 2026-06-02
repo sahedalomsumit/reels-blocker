@@ -9,6 +9,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.lifecycleScope
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.worker.DailyNotificationWorker
+import java.util.concurrent.TimeUnit
+import java.util.Calendar
 import com.example.util.isAccessibilityServiceEnabled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -84,6 +90,32 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repository.ensureSettingsExist()
         }
+
+        val calendar = Calendar.getInstance()
+        val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+        val targetHour = 21 // 9 PM
+
+        var initialDelay = 0L
+        if (currentHour < targetHour) {
+            calendar.set(Calendar.HOUR_OF_DAY, targetHour)
+            calendar.set(Calendar.MINUTE, 0)
+            initialDelay = calendar.timeInMillis - System.currentTimeMillis()
+        } else {
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+            calendar.set(Calendar.HOUR_OF_DAY, targetHour)
+            calendar.set(Calendar.MINUTE, 0)
+            initialDelay = calendar.timeInMillis - System.currentTimeMillis()
+        }
+
+        val dailyWorkRequest = PeriodicWorkRequestBuilder<DailyNotificationWorker>(1, TimeUnit.DAYS)
+            .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+            .build()
+
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "daily_summary",
+            ExistingPeriodicWorkPolicy.KEEP,
+            dailyWorkRequest
+        )
 
         val viewModel = ViewModelProvider(
             this,

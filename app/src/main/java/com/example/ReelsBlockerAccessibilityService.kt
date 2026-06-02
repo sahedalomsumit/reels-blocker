@@ -65,11 +65,12 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
         val eventType = event.eventType
 
         if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
-            eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+            eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
             
             val currentTime = System.currentTimeMillis()
             // Throttle checks slightly to prevent performance hits
-            if (currentTime - lastCheckTime < 250) return
+            if (currentTime - lastCheckTime < 100) return
             lastCheckTime = currentTime
 
             serviceScope.launch {
@@ -171,8 +172,8 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
 
     private fun blockAndOverlay(platformName: String) {
         val now = System.currentTimeMillis()
-        // Cooldown: 8s (5s hold + 3s buffer) to prevent rapid re-triggering
-        if (now - lastBlockTime < 8000) return
+        // Cooldown: 6s (3s hold + 3s buffer) to prevent rapid re-triggering
+        if (now - lastBlockTime < 6000) return
         lastBlockTime = now
 
         Log.d("ReelsBlocker", "LAUNCHING BLOCKER OVERLAY FOR PLATFORM: $platformName")
@@ -180,19 +181,22 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
         // Mark overlay as active BEFORE launching to suppress concurrent re-detection
         isOverlayActive = true
 
-        performGlobalAction(GLOBAL_ACTION_BACK)
-        
-        val intent = Intent(this, OverlayBlockerActivity::class.java).apply {
-            putExtra("platform_name", platformName)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        }
-        startActivity(intent)
-
-        // Clear the flag after a safe window (5s hold + 3s buffer = 8s)
         serviceScope.launch {
-            kotlinx.coroutines.delay(8000L)
+            performGlobalAction(GLOBAL_ACTION_BACK)
+            
+            // Wait briefly to allow the back action to execute before our overlay takes focus
+            kotlinx.coroutines.delay(300L)
+            
+            val intent = Intent(this@ReelsBlockerAccessibilityService, OverlayBlockerActivity::class.java).apply {
+                putExtra("platform_name", platformName)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            startActivity(intent)
+
+            // Clear the flag after a safe window (3s hold + 3s buffer = 6s)
+            kotlinx.coroutines.delay(6000L)
             isOverlayActive = false
             Log.d("ReelsBlocker", "Overlay guard lifted, detection resumed")
         }

@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -80,6 +81,9 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     
+    // Prevent gesture back
+    BackHandler { }
+    
     // Auto-record the block event on launch
     LaunchedEffect(Unit) {
         scope.launch {
@@ -94,7 +98,7 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
 
     LaunchedEffect(isHolding) {
         if (isHolding) {
-            val totalTime = 5000L
+            val totalTime = 3000L
             val interval = 50L
             val steps = (totalTime / interval).toInt()
             for (i in 1..steps) {
@@ -151,17 +155,13 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
         ) {
             // App Icon inside Glowing circle
             Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(Color(0x118B5CF6))
-                    .border(1.dp, Color(0xFF8B5CF6), CircleShape),
+                modifier = Modifier.size(80.dp),
                 contentAlignment = Alignment.Center
             ) {
                 androidx.compose.foundation.Image(
                     painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher_foreground),
                     contentDescription = "App Icon",
-                    modifier = Modifier.size(50.dp)
+                    modifier = Modifier.size(80.dp)
                 )
             }
 
@@ -236,7 +236,7 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
                 )
 
                 Text(
-                    text = if (isHolding) "Hold to unlock... (${(holdProgress * 5).toInt()}s)" else "Hold 5s to Go Back",
+                    text = if (isHolding) "Hold to unlock... (${(holdProgress * 3).toInt()}s)" else "Hold 3s to Go Back",
                     color = Color.White,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
