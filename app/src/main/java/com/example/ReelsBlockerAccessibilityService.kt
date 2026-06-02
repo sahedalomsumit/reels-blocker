@@ -114,12 +114,6 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
             }
         } catch (e: Exception) {
             Log.e("ReelsBlocker", "Error evaluating reel nodes", e)
-        } finally {
-            try {
-                rootNode.recycle()
-            } catch (e: Exception) {
-                // Ignore
-            }
         }
     }
 
@@ -135,7 +129,7 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
         
         val rect = android.graphics.Rect()
         node.getBoundsInScreen(rect)
-        val isAlmostFullScreen = rect.height() >= screenHeight * 0.7 && rect.width() >= screenWidth * 0.8
+        val isAlmostFullScreen = rect.height() >= screenHeight * 0.9 && rect.width() >= screenWidth * 0.9
 
         for (keyword in keywords) {
             if (text.contains(keyword, ignoreCase = true) || 
@@ -159,11 +153,6 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
             }
             if (child != null) {
                 val found = checkNodeKeywordsRecursive(child, keywords, screenHeight, screenWidth)
-                try {
-                    child.recycle()
-                } catch (e: Exception) {
-                    // Ignore
-                }
                 if (found) {
                     return true
                 }

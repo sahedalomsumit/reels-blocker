@@ -130,7 +130,7 @@ fun LoginScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = R.mipmap.ic_launcher_round),
+                        painter = painterResource(id = R.mipmap.ic_launcher_foreground),
                         contentDescription = "Reels Blocker App Icon",
                         modifier = Modifier
                             .size(76.dp)

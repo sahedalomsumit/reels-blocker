@@ -159,7 +159,7 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher),
+                    painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher_foreground),
                     contentDescription = "App Icon",
                     modifier = Modifier.size(50.dp)
                 )
