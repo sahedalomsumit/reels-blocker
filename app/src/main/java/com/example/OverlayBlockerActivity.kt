@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
@@ -153,19 +154,12 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // App Icon inside Glowing circle
-            Box(
-                modifier = Modifier.size(80.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(id = R.mipmap.ic_launcher_foreground),
-                    contentDescription = "App Icon",
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
-            }
+            // App icon with pre-rounded corners
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = R.drawable.ic_rounded),
+                contentDescription = "App Icon",
+                modifier = Modifier.size(80.dp)
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -180,6 +174,17 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Tagline quote box
+                Text(
+                    text = "Take back your focus.",
+                    color = Color(0xFF10B981),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Text(
                 text = "Same content. Same loop. You've seen it all before on $platformName.",
                 color = Color(0xFF94A3B8), // Muted dark text
@@ -187,26 +192,6 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
                 textAlign = TextAlign.Center,
                 lineHeight = 22.sp
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Tagline quote box
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0x07FFFFFF), RoundedCornerShape(12.dp))
-                    .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
-            ) {
-                Text(
-                    text = "“Take back your focus.”",
-                    color = Color(0xFF10B981), // Emerald green
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
 
             Spacer(modifier = Modifier.height(28.dp))
 
