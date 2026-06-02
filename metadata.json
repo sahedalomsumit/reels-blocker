@@ -1,6 +1,6 @@
 {
   "name": "Reels Blocker",
-  "description": "Blocks short-form video content to help you focus.",
+  "description": "Reels Blocker stops short-form video content from Facebook Reels, Instagram Reels, YouTube Shorts, and Snapchat Spotlights — all controlled from one simple place.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }
