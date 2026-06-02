@@ -113,6 +113,7 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
         return settings
     }
 
+    @Suppress("DEPRECATION")
     private fun recycleNode(node: AccessibilityNodeInfo?) {
         if (node != null && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             try {
