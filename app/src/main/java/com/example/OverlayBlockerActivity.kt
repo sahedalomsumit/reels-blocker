@@ -80,18 +80,15 @@ class OverlayBlockerActivity : ComponentActivity() {
 @Composable
 fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     
     // Prevent gesture back
     BackHandler { }
     
     // Auto-record the block event on launch
     LaunchedEffect(Unit) {
-        scope.launch {
-            val db = AppDatabase.getDatabase(context)
-            val repository = BlockerRepository(db.blockerDao())
-            repository.addBlockEvent(platformName)
-        }
+        val db = AppDatabase.getDatabase(context)
+        val repository = BlockerRepository(db.blockerDao())
+        repository.addBlockEvent(platformName)
     }
 
     var isHolding by remember { mutableStateOf(false) }

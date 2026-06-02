@@ -65,14 +65,12 @@ class FirebaseSyncManager {
             return
         }
         try {
-            val timestamp = event.timestamp
             db.collection("users")
                 .document(user.uid)
                 .collection("block_events")
-                .document(timestamp.toString())
-                .set(event)
+                .add(event) // Use add() to generate unique IDs and avoid collisions
                 .await()
-            Log.d("FirebaseSync", "Synced BlockEvent ($timestamp) for user ${user.uid}")
+            Log.d("FirebaseSync", "Synced BlockEvent for user ${user.uid}")
         } catch (e: Exception) {
             Log.e("FirebaseSync", "Error syncing BlockEvent for ${user.uid}", e)
         }

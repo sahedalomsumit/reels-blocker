@@ -94,7 +94,7 @@ fun DisableBlockerDialog(
                         modifier = Modifier
                             .fillMaxWidth(holdProgress)
                             .fillMaxHeight()
-                            .background(Color(0xFFEF4444))
+                            .background(Color(0xFF8B5CF6))
                             .align(Alignment.CenterStart)
                     )
                     Text(

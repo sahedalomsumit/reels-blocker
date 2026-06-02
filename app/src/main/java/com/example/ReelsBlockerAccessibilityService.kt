@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.os.Build
 import android.util.Log
 import com.example.data.local.AppDatabase
 import com.example.data.model.UserSettings
@@ -51,6 +52,8 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
         }
     }
 
+    private var analysisJob: kotlinx.coroutines.Job? = null
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
@@ -73,7 +76,9 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
             if (currentTime - lastCheckTime < 100) return
             lastCheckTime = currentTime
 
-            serviceScope.launch {
+            // Cancel any ongoing analysis to prioritize the latest event
+            analysisJob?.cancel()
+            analysisJob = serviceScope.launch {
                 val settings = cachedSettings ?: fetchSettingsDirectly()
                 
                 // 1. Is master blocker turned on?
@@ -87,12 +92,12 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
                 // 3. Inspect and match package names and content
                 when {
                     packageName.contains("instagram") && settings.blockInstagram -> {
-                        evaluateReelNodes(event, "Instagram", listOf(
+                        evaluateReelNodes("Instagram", listOf(
                             "reel", "Reels", "reels_tab", "clip", "Clips", "Suggested Reels", "reels_view"
                         ))
                     }
                     packageName.contains("facebook") && settings.blockFacebook -> {
-                        evaluateReelNodes(event, "Facebook", listOf(
+                        evaluateReelNodes("Facebook", listOf(
                             "watch", "Reels", "reel", "Short videos", "facebook_reels"
                         ))
                     }
@@ -108,7 +113,17 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
         return settings
     }
 
-    private fun evaluateReelNodes(event: AccessibilityEvent, platform: String, keywords: List<String>) {
+    private fun recycleNode(node: AccessibilityNodeInfo?) {
+        if (node != null && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            try {
+                node.recycle()
+            } catch (e: Exception) {
+                // Ignore recycle errors
+            }
+        }
+    }
+
+    private fun evaluateReelNodes(platform: String, keywords: List<String>) {
         val rootNode = rootInActiveWindow ?: return
         try {
             val rootRect = android.graphics.Rect()
@@ -116,53 +131,69 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
             val screenHeight = rootRect.height()
             val screenWidth = rootRect.width()
 
-            if (checkNodeKeywordsRecursive(rootNode, keywords, screenHeight, screenWidth)) {
+            if (checkNodeKeywordsIterative(rootNode, keywords, screenHeight, screenWidth)) {
                 blockAndOverlay(platform)
             }
         } catch (e: Exception) {
             Log.e("ReelsBlocker", "Error evaluating reel nodes", e)
+        } finally {
+            recycleNode(rootNode)
         }
     }
 
-    private fun checkNodeKeywordsRecursive(node: AccessibilityNodeInfo?, keywords: List<String>, screenHeight: Int, screenWidth: Int): Boolean {
-        if (node == null) return false
-
-        // Check text content or content descriptions
-        val text = node.text?.toString() ?: ""
-        val desc = node.contentDescription?.toString() ?: ""
-        val viewId = node.viewIdResourceName ?: ""
-
-        val isSelected = node.isSelected || desc.contains("selected", ignoreCase = true) || text.contains("selected", ignoreCase = true)
-        
+    private fun checkNodeKeywordsIterative(rootNode: AccessibilityNodeInfo, keywords: List<String>, screenHeight: Int, screenWidth: Int): Boolean {
+        val stack = mutableListOf<AccessibilityNodeInfo>()
+        stack.add(rootNode)
         val rect = android.graphics.Rect()
-        node.getBoundsInScreen(rect)
-        val isAlmostFullScreen = rect.height() >= screenHeight * 0.9 && rect.width() >= screenWidth * 0.9
 
-        for (keyword in keywords) {
-            if (text.contains(keyword, ignoreCase = true) || 
-                desc.contains(keyword, ignoreCase = true) ||
-                viewId.contains(keyword, ignoreCase = true)) {
-                
-                if (isSelected || isAlmostFullScreen) {
-                    Log.d("ReelsBlocker", "Matched blocker keyword: '$keyword' on node: text=$text desc=$desc viewId=$viewId, selected=$isSelected, fullScreen=$isAlmostFullScreen")
-                    return true
+        while (stack.isNotEmpty()) {
+            val node = stack.removeAt(stack.size - 1)
+
+            // Check text content or content descriptions
+            val text = node.text
+            val desc = node.contentDescription
+            val viewId = node.viewIdResourceName
+
+            node.getBoundsInScreen(rect)
+            val isAlmostFullScreen = rect.height() >= screenHeight * 0.9 && rect.width() >= screenWidth * 0.9
+            val isSelected = node.isSelected || 
+                    (desc != null && desc.contains("selected", ignoreCase = true)) || 
+                    (text != null && text.contains("selected", ignoreCase = true))
+
+            var matched = false
+            for (keyword in keywords) {
+                if ((text != null && text.contains(keyword, ignoreCase = true)) || 
+                    (desc != null && desc.contains(keyword, ignoreCase = true)) ||
+                    (viewId != null && viewId.contains(keyword, ignoreCase = true))) {
+                    
+                    if (isSelected || isAlmostFullScreen) {
+                        Log.d("ReelsBlocker", "Matched blocker keyword: '$keyword' on node: text=$text desc=$desc viewId=$viewId, selected=$isSelected, fullScreen=$isAlmostFullScreen")
+                        matched = true
+                        break
+                    }
                 }
             }
-        }
 
-        // Recursively search child nodes
-        val childCount = node.childCount
-        for (i in 0 until childCount) {
-            val child = try {
-                node.getChild(i)
-            } catch (e: Exception) {
-                null
-            }
-            if (child != null) {
-                val found = checkNodeKeywordsRecursive(child, keywords, screenHeight, screenWidth)
-                if (found) {
-                    return true
+            if (matched) {
+                // Recycle remaining nodes in stack
+                for (n in stack) {
+                    if (n != rootNode) recycleNode(n)
                 }
+                return true
+            }
+
+            // Add children to stack
+            val childCount = node.childCount
+            for (i in 0 until childCount) {
+                val child = try { node.getChild(i) } catch (e: Exception) { null }
+                if (child != null) {
+                    stack.add(child)
+                }
+            }
+            
+            // Recycle node if it's not the root (root is recycled in evaluateReelNodes)
+            if (node != rootNode) {
+                recycleNode(node)
             }
         }
         return false
