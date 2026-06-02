@@ -49,8 +49,8 @@ fun PlatformsScreen(
     val isDark = settings.theme == "dark"
 
     val platforms = listOf(
-        PlatformDetails("Facebook", "Watch & Reels tab", "com.facebook.katana", settings.blockFacebook, Color(0xFF1877F2)),
-        PlatformDetails("Instagram", "Reels, Explore Reels", "com.instagram.android", settings.blockInstagram, Color(0xFFE1306C))
+        PlatformDetails("Facebook", "Reels", "com.facebook.katana", settings.blockFacebook, Color(0xFF1877F2)),
+        PlatformDetails("Instagram", "Reels", "com.instagram.android", settings.blockInstagram, Color(0xFFE1306C))
     )
 
     val upcomingPlatforms = listOf(

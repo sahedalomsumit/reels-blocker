@@ -94,6 +94,7 @@ fun HomeScreen(
     )
 
     var showDisableDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var platformToDisable by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
 
     if (showDisableDialog) {
         DisableBlockerDialog(
@@ -102,6 +103,17 @@ fun HomeScreen(
             onDismiss = { showDisableDialog = false },
             onConfirmDisable = {
                 viewModel.setBlockerEnabled(false)
+            }
+        )
+    }
+
+    platformToDisable?.let { platformName ->
+        DisableBlockerDialog(
+            isDark = settings.theme == "dark",
+            platformName = platformName,
+            onDismiss = { platformToDisable = null },
+            onConfirmDisable = {
+                viewModel.togglePlatformBlock(platformName)
             }
         )
     }
@@ -156,7 +168,7 @@ fun HomeScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Blocked Feeds",
+                text = "Blocked Reels/Shorts",
                 color = if (settings.theme == "dark") Color.White else Color(0xFF0F0E17),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
@@ -180,8 +192,12 @@ fun HomeScreen(
             }
         }
 
-        HorizontalPlatformsList(settings = settings, onToggle = { platform ->
-            viewModel.togglePlatformBlock(platform)
+        HorizontalPlatformsList(settings = settings, onToggle = { platform, isEnabled ->
+            if (isEnabled) {
+                platformToDisable = platform
+            } else {
+                viewModel.togglePlatformBlock(platform)
+            }
         }, onSimulateBlock = { platform ->
             if (settings.blockerEnabled) {
                 viewModel.triggerSimulatedBlock(platform)
@@ -436,14 +452,14 @@ fun StatItemChip(
 @Composable
 fun HorizontalPlatformsList(
     settings: UserSettings,
-    onToggle: (String) -> Unit,
+    onToggle: (String, Boolean) -> Unit,
     onSimulateBlock: (String) -> Unit
 ) {
     val isDark = settings.theme == "dark"
     val scrollState = rememberScrollState()
     
     val list = listOf(
-        PlatformItem("Facebook", "Reels Tab", settings.blockFacebook, Color(0xFF1877F2)),
+        PlatformItem("Facebook", "Reels", settings.blockFacebook, Color(0xFF1877F2)),
         PlatformItem("Instagram", "Reels", settings.blockInstagram, Color(0xFFE1306C))
     ).sortedByDescending { it.enabled }
 
@@ -513,7 +529,7 @@ fun HorizontalPlatformsList(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (item.enabled) item.color.copy(alpha = 0.1f) else Color.Transparent)
-                            .clickable { onToggle(item.name) }
+                            .clickable { onToggle(item.name, item.enabled) }
                             .padding(vertical = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {

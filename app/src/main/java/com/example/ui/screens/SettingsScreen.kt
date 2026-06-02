@@ -97,68 +97,7 @@ fun SettingsScreen(
     val settings by viewModel.userSettings.collectAsState()
     val isDark = settings.theme == "dark"
 
-    var isAccessibilityGranted by remember { mutableStateOf(false) }
-    var isOverlayGranted by remember { mutableStateOf(false) }
-    var isBatteryUnrestricted by remember { mutableStateOf(false) }
-    var isNotificationGranted by remember { mutableStateOf(false) }
     var notificationEnabled by remember { mutableStateOf(true) }
-    var showAccessibilityDialog by remember { mutableStateOf(false) }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    fun refreshPermissionsState() {
-        isAccessibilityGranted = isAccessibilityServiceEnabled(context)
-        isOverlayGranted = Settings.canDrawOverlays(context)
-        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        isBatteryUnrestricted = pm.isIgnoringBatteryOptimizations(context.packageName)
-        isNotificationGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        } else {
-            NotificationManagerCompat.from(context).areNotificationsEnabled()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        refreshPermissionsState()
-    }
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                refreshPermissionsState()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-    if (showAccessibilityDialog) {
-        AlertDialog(
-            onDismissRequest = { showAccessibilityDialog = false },
-            title = { Text("Accessibility Permission", color = if (isDark) Color.White else Color(0xFF0F0E17)) },
-            text = { Text("If this setting is restricted by Android, first go to App Info > 3 dots (top right) > Allow restricted settings.\n\nThen open Accessibility settings to enable it.", color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)) },
-            containerColor = if (isDark) Color(0xFF1E1E1E) else Color.White,
-            confirmButton = {
-                TextButton(onClick = {
-                    showAccessibilityDialog = false
-                    try {
-                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    } catch (e: Exception) {}
-                }) {
-                    Text("Open Accessibility", color = Color(0xFF8B5CF6))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showAccessibilityDialog = false
-                    try {
-                        context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.packageName)))
-                    } catch (e: Exception) {}
-                }) {
-                    Text("Open App Info", color = Color(0xFF8B5CF6))
-                }
-            }
-        )
-    }
 
     Column(
         modifier = Modifier
@@ -178,7 +117,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Manage schedule, permissions and account data.",
+                text = "Manage account, theme, schedule and notifications.",
                 color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
                 fontSize = 14.sp
             )
@@ -260,13 +199,14 @@ fun SettingsScreen(
 
         // 2. Theme Setting Card
         SettingToggleCard(
-            title = "Dark Theme ThemeMode",
-            description = "Toggle light and dark palettes",
+            title = "Dark Theme",
+            description = "Toggle light and dark theme",
             icon = Icons.Default.DarkMode,
             checked = isDark,
             isDark = isDark
-        ) {
+        ) { checked ->
             viewModel.toggleTheme(settings.theme)
+            Toast.makeText(context, if (checked) "Dark theme enabled" else "Light theme enabled", Toast.LENGTH_SHORT).show()
         }
 
         // 3. Scheduling Picker Card
@@ -302,7 +242,7 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Daily Blocking Schedule",
+                                text = "Blocking Schedule",
                                 color = if (isDark) Color.White else Color(0xFF0F0E17),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
@@ -317,7 +257,10 @@ fun SettingsScreen(
 
                     Switch(
                         checked = settings.scheduleEnabled,
-                        onCheckedChange = { viewModel.setScheduleEnabled(it) },
+                        onCheckedChange = { checked -> 
+                            viewModel.setScheduleEnabled(checked)
+                            Toast.makeText(context, if (checked) "Schedule turned on" else "Schedule turned off", Toast.LENGTH_SHORT).show()
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = Color(0xFF10B981)
@@ -356,71 +299,18 @@ fun SettingsScreen(
             }
         }
 
-        // 4. Permissions Status Cards
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.dp, if (isDark) Color(0x14FFFFFF) else Color(0xFFE5E7EB), RoundedCornerShape(20.dp))
-                .background(if (isDark) Color(0x0EFFFFFF) else Color.White)
-                .padding(16.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(
-                    text = "SYSTEM PERMISSIONS",
-                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
-                )
 
-                SettingsPermissionRow("Accessibility Access", isAccessibilityGranted, isDark) {
-                    if (!isAccessibilityGranted) {
-                        showAccessibilityDialog = true
-                    } else {
-                        try {
-                            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                        } catch (e: Exception) {}
-                    }
-                }
-                SettingsPermissionRow("Appear on Top", isOverlayGranted, isDark) {
-                    try {
-                        context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + context.packageName)))
-                    } catch (e: Exception) {}
-                }
-                SettingsPermissionRow("Unrestricted Battery", isBatteryUnrestricted, isDark) {
-                    try {
-                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                            data = Uri.parse("package:${context.packageName}")
-                        }
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        try {
-                            context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                        } catch (e2: Exception) {}
-                    }
-                }
-                SettingsPermissionRow("Notification Access (Optional)", isNotificationGranted, isDark) {
-                    try {
-                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                        }
-                        context.startActivity(intent)
-                    } catch (e: Exception) {}
-                }
-            }
-        }
 
         // 5. Notification Setting Card
         SettingToggleCard(
-            title = "Summary Notifications",
+            title = "Notifications",
             description = "Get daily reminders of hours saved",
             icon = Icons.Default.Notifications,
             checked = notificationEnabled,
             isDark = isDark
         ) { checked ->
             notificationEnabled = checked
-            Toast.makeText(context, if (checked) "Summary digest enabled!" else "Notifications turned off", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, if (checked) "Notifications turned on" else "Notifications turned off", Toast.LENGTH_SHORT).show()
         }
 
 
@@ -664,41 +554,3 @@ fun ScheduleTimeAdjuster(
     }
 }
 
-@Composable
-fun SettingsPermissionRow(title: String, isGranted: Boolean, isDark: Boolean, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = if (isDark) Color.White else Color(0xFF0F0E17),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
-            )
-            val isOptional = title.contains("(Optional)", ignoreCase = true)
-            Text(
-                text = if (isGranted) "Permission Granted" else (if (isOptional) "Optional" else "Required"),
-                color = if (isGranted) Color(0xFF10B981) else (if (isOptional) Color(0xFF64748B) else Color(0xFFEF4444)),
-                fontSize = 12.sp
-            )
-        }
-
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .background(if (isGranted) Color(0xFF10B981).copy(alpha = 0.12f) else Color(0xFF8B5CF6).copy(alpha = 0.12f))
-                .clickable(onClick = onClick)
-                .padding(vertical = 8.dp, horizontal = 14.dp)
-        ) {
-            Text(
-                text = if (isGranted) "Settings" else "Setup",
-                color = if (isGranted) Color(0xFF10B981) else Color(0xFF8B5CF6),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
