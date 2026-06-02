@@ -9,6 +9,7 @@ import com.example.data.remote.FirebaseSyncManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import android.util.Log
 
 class BlockerRepository(private val dao: BlockerDao) {
     private val syncManager = FirebaseSyncManager()
@@ -35,27 +36,29 @@ class BlockerRepository(private val dao: BlockerDao) {
 
     suspend fun updateSettings(settings: UserSettings) {
         dao.insertUserSettings(settings)
-        scope.launch { syncManager.syncUserSettings(settings) }
+        // Sync to cloud in background
+        scope.launch { 
+            syncManager.syncUserSettings(settings) 
+        }
     }
 
     suspend fun addBlockEvent(platform: String) {
-        // Record block event
-        dao.insertBlockEvent(BlockEvent(platform = platform))
+        // 1. Record block event locally and get the generated ID
+        val event = BlockEvent(platform = platform)
+        val generatedId = dao.insertBlockEvent(event)
+        val eventWithId = event.copy(id = generatedId)
         
-        // Fetch current settings directly & increment
+        // 2. Fetch current settings directly & increment
         val currentSettings = getSettingsDirect()
-        val totalBlocked = currentSettings.totalBlocked + 1
-        // Assuming each block saves about 3 minutes of doomscrolling
-        val timeSaved = currentSettings.totalTimeSavedMinutes + 3
-        
         val updatedSettings = currentSettings.copy(
-            totalBlocked = totalBlocked,
-            totalTimeSavedMinutes = timeSaved
+            totalBlocked = currentSettings.totalBlocked + 1,
+            totalTimeSavedMinutes = currentSettings.totalTimeSavedMinutes + 3
         )
         dao.insertUserSettings(updatedSettings)
         
+        // 3. Sync both to cloud
         scope.launch {
-            syncManager.syncBlockEvent(BlockEvent(platform = platform, timestamp = System.currentTimeMillis()))
+            syncManager.syncBlockEvent(eventWithId)
             syncManager.syncUserSettings(updatedSettings)
         }
     }
@@ -73,16 +76,26 @@ class BlockerRepository(private val dao: BlockerDao) {
         dao.insertUserSettings(updated)
         
         scope.launch {
+            Log.d("BlockerRepository", "User logged in, starting cloud sync...")
             // Upon login, pull cloud data
             val cloudSettings = syncManager.fetchUserSettings()
             if (cloudSettings != null) {
+                Log.d("BlockerRepository", "Found cloud settings, merging...")
                 dao.insertUserSettings(cloudSettings.copy(isLoggedIn = true))
             } else {
+                Log.d("BlockerRepository", "No cloud settings found, uploading local settings...")
                 syncManager.syncUserSettings(updated)
             }
             
             val cloudEvents = syncManager.fetchAllBlockEvents()
-            cloudEvents.forEach { dao.insertBlockEvent(it) }
+            Log.d("BlockerRepository", "Fetched ${cloudEvents.size} cloud events.")
+            cloudEvents.forEach { 
+                // We use insertBlockEvent which will auto-generate new IDs locally 
+                // to avoid conflicts, or we could preserve cloud IDs.
+                // Since cloud ID in Firestore is the timestamp document name,
+                // and BlockEvent.id is just for local Room, this is safe.
+                dao.insertBlockEvent(it.copy(id = 0)) 
+            }
         }
     }
 

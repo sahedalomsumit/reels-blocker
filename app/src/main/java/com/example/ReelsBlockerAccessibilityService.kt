@@ -22,6 +22,8 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
     private var cachedSettings: UserSettings? = null
     private var lastCheckTime = 0L
     private var lastBlockTime = 0L
+    // True while the overlay activity is on screen; suppresses re-detection
+    @Volatile private var isOverlayActive = false
 
     private val ignoredPackages = setOf(
         "com.android.systemui",
@@ -54,7 +56,11 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
 
         val packageName = event.packageName?.toString() ?: return
         val selfPackage = applicationContext.packageName
+        // Ignore our own overlay activity and known launchers/system UI
         if (packageName == selfPackage || packageName in ignoredPackages) return
+
+        // While the overlay is shown, suppress all re-detection to prevent flicker
+        if (isOverlayActive) return
 
         val eventType = event.eventType
 
@@ -165,20 +171,31 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
 
     private fun blockAndOverlay(platformName: String) {
         val now = System.currentTimeMillis()
-        if (now - lastBlockTime < 2000) return
+        // Cooldown: 8s (5s hold + 3s buffer) to prevent rapid re-triggering
+        if (now - lastBlockTime < 8000) return
         lastBlockTime = now
 
         Log.d("ReelsBlocker", "LAUNCHING BLOCKER OVERLAY FOR PLATFORM: $platformName")
 
+        // Mark overlay as active BEFORE launching to suppress concurrent re-detection
+        isOverlayActive = true
+
         performGlobalAction(GLOBAL_ACTION_BACK)
         
-        // Option B: Hard Block overlay launch
         val intent = Intent(this, OverlayBlockerActivity::class.java).apply {
             putExtra("platform_name", platformName)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
         startActivity(intent)
+
+        // Clear the flag after a safe window (5s hold + 3s buffer = 8s)
+        serviceScope.launch {
+            kotlinx.coroutines.delay(8000L)
+            isOverlayActive = false
+            Log.d("ReelsBlocker", "Overlay guard lifted, detection resumed")
+        }
     }
 
     private fun isCurrentTimeInSchedule(start: String, end: String): Boolean {

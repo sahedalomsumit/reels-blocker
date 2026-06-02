@@ -94,7 +94,7 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
 
     LaunchedEffect(isHolding) {
         if (isHolding) {
-            val totalTime = 10000L
+            val totalTime = 5000L
             val interval = 50L
             val steps = (totalTime / interval).toInt()
             for (i in 1..steps) {
@@ -236,7 +236,7 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
                 )
 
                 Text(
-                    text = if (isHolding) "Hold to unlock... (${(holdProgress * 10).toInt()}s)" else "Hold 10s to Go Back",
+                    text = if (isHolding) "Hold to unlock... (${(holdProgress * 5).toInt()}s)" else "Hold 5s to Go Back",
                     color = Color.White,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold

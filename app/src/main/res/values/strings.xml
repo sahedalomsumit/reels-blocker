@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Reels Blocker — Block Reels, Shorts</string>
+    <string name="app_name">Reels Blocker</string>
     <string name="launcher_name">Reels Blocker</string>
     <string name="accessibility_service_label">Reels Blocker</string>
     <string name="accessibility_service_summary">Blocks Reels, Shorts, and other short-form feeds in social apps.</string>

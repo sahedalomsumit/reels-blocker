@@ -21,13 +21,13 @@ interface BlockerDao {
     suspend fun getUserSettingsDirect(): UserSettings?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertUserSettings(settings: UserSettings)
+    suspend fun insertUserSettings(settings: UserSettings): Long
 
     @Query("SELECT * FROM block_events ORDER BY timestamp DESC")
     fun getAllBlockEvents(): Flow<List<BlockEvent>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertBlockEvent(event: BlockEvent)
+    suspend fun insertBlockEvent(event: BlockEvent): Long
 
     @Query("DELETE FROM block_events")
     suspend fun clearAllBlockEvents()
