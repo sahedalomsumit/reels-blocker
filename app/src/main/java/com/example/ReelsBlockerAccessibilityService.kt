@@ -82,12 +82,12 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
                     packageName.contains("instagram") && settings.blockInstagram -> {
                         evaluateReelNodes(event, "Instagram", listOf(
                             "reel", "Reels", "reels_tab", "clip", "Clips", "Suggested Reels", "reels_view"
-                        ), settings.blockInstagramInbox)
+                        ))
                     }
                     packageName.contains("facebook") && settings.blockFacebook -> {
                         evaluateReelNodes(event, "Facebook", listOf(
                             "watch", "Reels", "reel", "Short videos", "facebook_reels"
-                        ), settings.blockFacebookInbox)
+                        ))
                     }
                 }
             }
@@ -101,7 +101,7 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
         return settings
     }
 
-    private fun evaluateReelNodes(event: AccessibilityEvent, platform: String, keywords: List<String>, isInboxBlocked: Boolean) {
+    private fun evaluateReelNodes(event: AccessibilityEvent, platform: String, keywords: List<String>) {
         val rootNode = rootInActiveWindow ?: return
         try {
             val rootRect = android.graphics.Rect()
@@ -110,11 +110,6 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
             val screenWidth = rootRect.width()
 
             if (checkNodeKeywordsRecursive(rootNode, keywords, screenHeight, screenWidth)) {
-                val inInbox = isInboxContext(rootNode)
-                if (inInbox && !isInboxBlocked) {
-                    Log.d("ReelsBlocker", "Inbox reel detected and inbox blocking is off. Allowing.")
-                    return
-                }
                 blockAndOverlay(platform)
             }
         } catch (e: Exception) {
@@ -177,40 +172,7 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun isInboxContext(node: AccessibilityNodeInfo?): Boolean {
-        if (node == null) return false
 
-        val text = node.text?.toString()?.lowercase() ?: ""
-        val desc = node.contentDescription?.toString()?.lowercase() ?: ""
-        val viewId = node.viewIdResourceName?.lowercase() ?: ""
-
-        if (text.contains("message") || text.contains("direct") || text.contains("chat") ||
-            desc.contains("message") || desc.contains("direct") || desc.contains("chat") ||
-            viewId.contains("message") || viewId.contains("direct") || viewId.contains("chat") || viewId.contains("thread")) {
-            return true
-        }
-
-        val childCount = node.childCount
-        for (i in 0 until childCount) {
-            val child = try {
-                node.getChild(i)
-            } catch (e: Exception) {
-                null
-            }
-            if (child != null) {
-                val found = isInboxContext(child)
-                try {
-                    child.recycle()
-                } catch (e: Exception) {
-                    // Ignore
-                }
-                if (found) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
 
     private fun blockAndOverlay(platformName: String) {
         val now = System.currentTimeMillis()

@@ -17,9 +17,7 @@ data class UserSettings(
     val scheduleEnd: String = "22:00",
     // Platform block toggles
     val blockInstagram: Boolean = true,
-    val blockInstagramInbox: Boolean = false,
     val blockFacebook: Boolean = true,
-    val blockFacebookInbox: Boolean = false,
     // Aggregated cache stats
     val totalBlocked: Int = 0,
     val totalTimeSavedMinutes: Int = 0,

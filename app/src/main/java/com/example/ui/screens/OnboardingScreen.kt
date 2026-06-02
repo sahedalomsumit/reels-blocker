@@ -5,6 +5,11 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import com.example.R
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationManagerCompat
+import android.os.PowerManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -59,24 +64,33 @@ fun OnboardingScreen(
     onFinished: () -> Unit
 ) {
     val context = LocalContext.current
-    var currentStep by remember { mutableStateOf(1) }
     var isAccessibilityGranted by remember { mutableStateOf(false) }
+    var isOverlayGranted by remember { mutableStateOf(false) }
+    var isBatteryUnrestricted by remember { mutableStateOf(false) }
+    var isNotificationGranted by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    fun refreshAccessibilityState() {
+    fun refreshPermissionsState() {
         isAccessibilityGranted = isAccessibilityServiceEnabled(context)
+        isOverlayGranted = Settings.canDrawOverlays(context)
+        val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
+        isBatteryUnrestricted = pm.isIgnoringBatteryOptimizations(context.packageName)
+        isNotificationGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+            NotificationManagerCompat.from(context).areNotificationsEnabled()
+        }
     }
 
-    // Re-check when step changes or user returns from system settings
-    LaunchedEffect(currentStep) {
-        refreshAccessibilityState()
+    LaunchedEffect(Unit) {
+        refreshPermissionsState()
     }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                refreshAccessibilityState()
+                refreshPermissionsState()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -110,319 +124,120 @@ fun OnboardingScreen(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Indicator
-            Row(
+            // Permissions Screen
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.Center
+                    .weight(1f)
+                    .padding(vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .height(4.dp)
-                        .weight(1f)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(if (currentStep >= 1) Color(0xFF8B5CF6) else Color(0x33FFFFFF))
+                Text(
+                    text = "App Permissions",
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .height(4.dp)
-                        .weight(1f)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(if (currentStep >= 2) Color(0xFF8B5CF6) else Color(0x33FFFFFF))
-                )
-            }
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // Step Content
-            if (currentStep == 1) {
-                // Step 1: How it Works
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(vertical = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                val allGranted = isAccessibilityGranted && isOverlayGranted && isBatteryUnrestricted
+
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "How It Works Info",
-                        tint = Color(0xFF8B5CF6),
-                        modifier = Modifier.size(72.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Text(
-                        text = "Take Back Control",
-                        color = Color.White,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "How Reels Blocker secures your attention:",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 15.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    // Instruction Cards
-                    InstructionItem(
-                        number = "1",
-                        title = "Select Your Platforms",
-                        description = "Choose which social feeds to lock out (Instagram, YouTube, Facebook, or TikTok)."
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    InstructionItem(
-                        number = "2",
-                        title = "On-Device Interception",
-                        description = "Our accessibility service runs safely in the background, checking if full reels are loaded."
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    InstructionItem(
-                        number = "3",
-                        title = "Block & Redirect",
-                        description = "We instantly close the reel overlay or launch a warning block dashboard, saving you hours!"
-                    )
+                    item {
+                        PermissionItem(
+                            title = "1. Accessibility Service",
+                            description = "Required to detect and block short video feeds.",
+                            isGranted = isAccessibilityGranted,
+                            onClick = {
+                                try {
+                                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                } catch (e: Exception) {}
+                            }
+                        )
+                    }
+                    item {
+                        PermissionItem(
+                            title = "2. Appear on Top",
+                            description = "Required to show the block screen over other apps.",
+                            isGranted = isOverlayGranted,
+                            onClick = {
+                                try {
+                                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + context.packageName))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {}
+                            }
+                        )
+                    }
+                    item {
+                        PermissionItem(
+                            title = "3. Unrestricted Battery",
+                            description = "Ensures the blocker isn't killed by the system.",
+                            isGranted = isBatteryUnrestricted,
+                            onClick = {
+                                try {
+                                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                        data = Uri.parse("package:${context.packageName}")
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    try {
+                                        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                        context.startActivity(intent)
+                                    } catch (e2: Exception) {}
+                                }
+                            }
+                        )
+                    }
+                    item {
+                        PermissionItem(
+                            title = "4. Notifications (Optional)",
+                            description = "Used to show you daily usage summaries.",
+                            isGranted = isNotificationGranted,
+                            onClick = {
+                                try {
+                                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {}
+                            }
+                        )
+                    }
                 }
 
-                // Footer Actions Step 1
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 Button(
-                    onClick = { currentStep = 2 },
+                    onClick = onFinished,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp)
                         .testTag("onboarding_next_button"),
+                    enabled = allGranted,
                     shape = RoundedCornerShape(27.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), disabledContainerColor = Color(0xFF333333))
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Next: Enable Blocker",
+                            text = if (allGranted) "Start Blocking" else "Grant mandatory permissions",
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = if (allGranted) Color.White else Color.Gray
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.Default.ArrowForward,
-                            contentDescription = "Next",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            } else {
-                // Step 2: Grant Accessibility Access
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(vertical = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(76.dp)
-                            .clip(CircleShape)
-                            .background(if (isAccessibilityGranted) Color(0x2210B981) else Color(0x228B5CF6)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (isAccessibilityGranted) Icons.Default.CheckCircle else Icons.Default.Settings,
-                            contentDescription = "Settings Icon",
-                            tint = if (isAccessibilityGranted) Color(0xFF10B981) else Color(0xFF8B5CF6),
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Text(
-                        text = "Grant System Access",
-                        color = Color.White,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "We require on-device Accessibility Service permission to close short-form doom scrolls automatically.",
-                        color = Color(0xFF94A3B8),
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        lineHeight = 20.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(28.dp))
-
-                    // Live state notification box
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(
-                                1.dp,
-                                if (isAccessibilityGranted) Color(0x3310B981) else Color(0x14FFFFFF),
-                                RoundedCornerShape(16.dp)
-                            )
-                            .background(
-                                if (isAccessibilityGranted) Color(0x0E10B981) else Color(0x05FFFFFF),
-                                RoundedCornerShape(16.dp)
-                            )
-                            .padding(16.dp)
-                    ) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isAccessibilityGranted) Color(0xFF10B981) else Color(0xFFEF4444))
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = if (isAccessibilityGranted) "Accessibility: Enabled" else "Accessibility: Disabled",
-                                    color = if (isAccessibilityGranted) Color(0xFF10B981) else Color(0xFFEF4444),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = if (isAccessibilityGranted) {
-                                    "Successfully connected! The blocker is now fully equipped to protect your focus."
-                                } else {
-                                    "Tap 'Open Settings' and switch on 'Reels Blocker' to activate on-device blocking."
-                                },
-                                color = Color(0xFF94A3B8),
-                                fontSize = 12.sp,
-                                lineHeight = 18.sp
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Instructions helper
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "How to enable:",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        GuideStepItem(text = "1. Tap 'Open Accessibility Settings' below")
-                        GuideStepItem(text = "2. Under Downloaded apps, tap 'Reels Blocker'")
-                        GuideStepItem(text = "3. Turn on 'Use Reels Blocker'")
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = context.getString(R.string.restricted_settings_hint),
-                                color = Color(0xFFF59E0B),
-                                fontSize = 11.sp,
-                                lineHeight = 16.sp
-                            )
-                        }
-                    }
-                }
-
-                // Action controls for Step 2
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Open Settings Direct Intent
-                    Button(
-                        onClick = {
-                            try {
-                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                // fallback
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .testTag("open_settings_button"),
-                        shape = RoundedCornerShape(26.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6))
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.OpenInNew,
-                                contentDescription = "Open Settings Launcher",
-                                modifier = Modifier.size(18.dp)
-                            )
+                        if (allGranted) {
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Open Accessibility Settings",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Ready",
+                                modifier = Modifier.size(18.dp),
+                                tint = Color.White
                             )
                         }
-                    }
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        OutlinedButton(
-                            onClick = {
-                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", context.packageName, null)
-                                }
-                                context.startActivity(intent)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                            shape = RoundedCornerShape(24.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                            border = borderDarkBorder()
-                        ) {
-                            Text(
-                                text = "Open App Info (Allow Restricted Settings)",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-
-                    // Simulated / Skip Verification (very important for emulator where testing takes place or bypass)
-                    OutlinedButton(
-                        onClick = onFinished,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .testTag("onboarding_proceed_anyway"),
-                        shape = RoundedCornerShape(26.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.White
-                        ),
-                        border = borderDarkBorder()
-                    ) {
-                        Text(
-                            text = if (isAccessibilityGranted) "Let's Start" else "Bypass & Enter Dashboard",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
                     }
                 }
             }
@@ -499,3 +314,42 @@ fun borderDarkBorder() = androidx.compose.foundation.BorderStroke(
     width = 1.dp,
     color = Color(0x22FFFFFF)
 )
+
+@Composable
+fun PermissionItem(title: String, description: String, isGranted: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, if (isGranted) Color(0x3310B981) else Color(0x14FFFFFF), RoundedCornerShape(16.dp))
+            .background(if (isGranted) Color(0x0E10B981) else Color(0x05FFFFFF), RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = if (isGranted) Color(0xFF10B981) else Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                color = Color(0xFF94A3B8),
+                fontSize = 13.sp,
+                lineHeight = 18.sp
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Button(
+            onClick = onClick,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isGranted) Color(0xFF10B981).copy(alpha = 0.2f) else Color(0xFF8B5CF6),
+                contentColor = if (isGranted) Color(0xFF10B981) else Color.White
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(text = if (isGranted) "Granted" else "Grant", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}

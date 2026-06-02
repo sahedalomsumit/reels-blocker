@@ -98,14 +98,4 @@ class BlockerRepository(private val dao: BlockerDao) {
         )
     }
 
-    suspend fun resetStats() {
-        val current = dao.getUserSettingsDirect() ?: UserSettings()
-        dao.clearAllBlockEvents()
-        dao.insertUserSettings(
-            current.copy(
-                totalBlocked = 0,
-                totalTimeSavedMinutes = 0
-            )
-        )
-    }
 }

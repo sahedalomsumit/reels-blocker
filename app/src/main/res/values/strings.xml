@@ -1,8 +1,9 @@
 <resources>
-    <string name="app_name">Reels Blocker</string>
+    <string name="app_name">Reels Blocker — Block Reels, Shorts</string>
+    <string name="launcher_name">Reels Blocker</string>
     <string name="accessibility_service_label">Reels Blocker</string>
     <string name="accessibility_service_summary">Blocks Reels, Shorts, and other short-form feeds in social apps.</string>
-    <string name="accessibility_description">Reels Blocker uses accessibility to detect when you open short-form video feeds (Reels, Shorts, TikTok, Spotlight, etc.) in supported apps and blocks them based on your settings. No data leaves your device.</string>
+    <string name="accessibility_description">Reels Blocker uses accessibility to detect when you open short-form video feeds (Reels, Shorts, Spotlight, etc.) in supported apps and blocks them based on your settings. No data leaves your device.</string>
     <string name="restricted_settings_hint">If Reels Blocker does not appear or cannot be turned on: open App info → ⋮ menu → Allow restricted settings, then try again.</string>
     <!-- Web client ID from Firebase / Google Cloud (client_type 3 in google-services.json) -->
     <string name="default_web_client_id" translatable="false">870192672225-6qrb455cjjovkf37flpm6veb724jnpn1.apps.googleusercontent.com</string>

@@ -47,15 +47,12 @@ fun PlatformsScreen(
     val isDark = settings.theme == "dark"
 
     val platforms = listOf(
-        PlatformDetails("Facebook", "Watch & Reels tab", "com.facebook.katana", settings.blockFacebook, Color(0xFF1877F2), true, settings.blockFacebookInbox, "facebook_inbox"),
-        PlatformDetails("Instagram", "Reels, Explore Reels", "com.instagram.android", settings.blockInstagram, Color(0xFFE1306C), true, settings.blockInstagramInbox, "instagram_inbox")
+        PlatformDetails("Facebook", "Watch & Reels tab", "com.facebook.katana", settings.blockFacebook, Color(0xFF1877F2)),
+        PlatformDetails("Instagram", "Reels, Explore Reels", "com.instagram.android", settings.blockInstagram, Color(0xFFE1306C))
     )
 
     val upcomingPlatforms = listOf(
         PlatformDetails("YouTube", "Shorts", "com.google.android.youtube", false, Color(0xFFFF0000)),
-        PlatformDetails("TikTok", "Entire App & FYP", "com.zhiliaoapp.musically", false, Color(0xFF00F2FE)),
-        PlatformDetails("X (Twitter)", "Video tab, For You feeds", "com.twitter.android", false, Color(0xFF1DA1F2)),
-        PlatformDetails("Threads", "Reels-style videos", "com.instagram.barcelona", false, Color(0xFFE1306C)),
         PlatformDetails("Snapchat", "Spotlight", "com.snapchat.android", false, Color(0xFFFFFC00))
     )
 
@@ -92,7 +89,6 @@ fun PlatformsScreen(
                 PlatformConfigRow(
                     p = p,
                     isDark = isDark,
-                    onToggleInbox = { key -> viewModel.togglePlatformBlock(key) },
                     onToggle = { viewModel.togglePlatformBlock(p.name.lowercase()) }
                 )
             }
@@ -148,7 +144,6 @@ fun PlatformsScreen(
 fun PlatformConfigRow(
     p: PlatformDetails,
     isDark: Boolean,
-    onToggleInbox: (String) -> Unit = {},
     onToggle: () -> Unit
 ) {
     Box(
@@ -236,34 +231,8 @@ fun PlatformConfigRow(
                 modifier = Modifier.testTag("switch_${p.name.lowercase().replace(" ", "_")}")
             )
         }
-
-        if (p.hasInbox) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 60.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Block Inbox Reels",
-                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Switch(
-                    checked = p.inboxEnabled,
-                    onCheckedChange = { onToggleInbox(p.inboxKey) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF10B981),
-                        uncheckedTrackColor = if (isDark) Color(0x1AFFFFFF) else Color(0xFFE2E8F0)
-                    )
-                )
-            }
-        }
     }
+}
 }
 
 data class PlatformDetails(
@@ -271,8 +240,5 @@ data class PlatformDetails(
     val blockedContent: String,
     val packageName: String,
     val enabled: Boolean,
-    val color: Color,
-    val hasInbox: Boolean = false,
-    val inboxEnabled: Boolean = false,
-    val inboxKey: String = ""
+    val color: Color
 )

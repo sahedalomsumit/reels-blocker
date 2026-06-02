@@ -2,8 +2,15 @@ package com.example.ui.screens
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationManagerCompat
+import android.os.PowerManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -91,27 +98,66 @@ fun SettingsScreen(
     val isDark = settings.theme == "dark"
 
     var isAccessibilityGranted by remember { mutableStateOf(false) }
+    var isOverlayGranted by remember { mutableStateOf(false) }
+    var isBatteryUnrestricted by remember { mutableStateOf(false) }
+    var isNotificationGranted by remember { mutableStateOf(false) }
     var notificationEnabled by remember { mutableStateOf(true) }
-    var showResetDialog by remember { mutableStateOf(false) }
+    var showAccessibilityDialog by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    fun refreshAccessibilityState() {
+    fun refreshPermissionsState() {
         isAccessibilityGranted = isAccessibilityServiceEnabled(context)
+        isOverlayGranted = Settings.canDrawOverlays(context)
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        isBatteryUnrestricted = pm.isIgnoringBatteryOptimizations(context.packageName)
+        isNotificationGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+            NotificationManagerCompat.from(context).areNotificationsEnabled()
+        }
     }
 
     LaunchedEffect(Unit) {
-        refreshAccessibilityState()
+        refreshPermissionsState()
     }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                refreshAccessibilityState()
+                refreshPermissionsState()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    if (showAccessibilityDialog) {
+        AlertDialog(
+            onDismissRequest = { showAccessibilityDialog = false },
+            title = { Text("Accessibility Permission", color = if (isDark) Color.White else Color(0xFF0F0E17)) },
+            text = { Text("If this setting is restricted by Android, first go to App Info > 3 dots (top right) > Allow restricted settings.\n\nThen open Accessibility settings to enable it.", color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)) },
+            containerColor = if (isDark) Color(0xFF1E1E1E) else Color.White,
+            confirmButton = {
+                TextButton(onClick = {
+                    showAccessibilityDialog = false
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    } catch (e: Exception) {}
+                }) {
+                    Text("Open Accessibility", color = Color(0xFF8B5CF6))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showAccessibilityDialog = false
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.packageName)))
+                    } catch (e: Exception) {}
+                }) {
+                    Text("Open App Info", color = Color(0xFF8B5CF6))
+                }
+            }
+        )
     }
 
     Column(
@@ -203,7 +249,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Sign Out & Disconnect",
+                            text = "Sign Out",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -328,46 +374,39 @@ fun SettingsScreen(
                     letterSpacing = 0.5.sp
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Accessibility Access",
-                            color = if (isDark) Color.White else Color(0xFF0F0E17),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (isAccessibilityGranted) "Permission Granted" else "Required to capture short video feeds",
-                            color = if (isAccessibilityGranted) Color(0xFF10B981) else Color(0xFFEF4444),
-                            fontSize = 12.sp
-                        )
+                SettingsPermissionRow("Accessibility Access", isAccessibilityGranted, isDark) {
+                    if (!isAccessibilityGranted) {
+                        showAccessibilityDialog = true
+                    } else {
+                        try {
+                            context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        } catch (e: Exception) {}
                     }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF8B5CF6).copy(alpha = 0.12f))
-                            .clickable {
-                                try {
-                                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                    context.startActivity(intent)
-                                } catch (e: java.lang.Exception) {
-                                    Toast.makeText(context, "System settings could not be loaded", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                            .padding(vertical = 8.dp, horizontal = 14.dp)
-                    ) {
-                        Text(
-                            text = "Setup",
-                            color = Color(0xFF8B5CF6),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                }
+                SettingsPermissionRow("Appear on Top", isOverlayGranted, isDark) {
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + context.packageName)))
+                    } catch (e: Exception) {}
+                }
+                SettingsPermissionRow("Unrestricted Battery", isBatteryUnrestricted, isDark) {
+                    try {
+                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        try {
+                            context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        } catch (e2: Exception) {}
                     }
+                }
+                SettingsPermissionRow("Notification Access", isNotificationGranted, isDark) {
+                    try {
+                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {}
                 }
             }
         }
@@ -384,62 +423,7 @@ fun SettingsScreen(
             Toast.makeText(context, if (checked) "Summary digest enabled!" else "Notifications turned off", Toast.LENGTH_SHORT).show()
         }
 
-        // 6. Destructive Reset Statistics Action
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.2f), RoundedCornerShape(20.dp))
-                .background(Color(0xFFEF4444).copy(alpha = 0.05f))
-                .clickable { showResetDialog = true }
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Restore Defaults",
-                    tint = Color(0xFFEF4444),
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "Reset Application Statistics",
-                    color = Color(0xFFEF4444),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
 
-        // Reset Confirm Dialog
-        if (showResetDialog) {
-            AlertDialog(
-                onDismissRequest = { showResetDialog = false },
-                title = { Text(text = "Reset All Stats?", fontWeight = FontWeight.Bold) },
-                text = { Text(text = "This action will permanently purge all block logs and saved minutes. This cannot be undone.") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            viewModel.resetStatistics()
-                            showResetDialog = false
-                            Toast.makeText(context, "Statistics reset successfully!", Toast.LENGTH_SHORT).show()
-                        }
-                    ) {
-                        Text(text = "Reset", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showResetDialog = false }) {
-                        Text(text = "Cancel")
-                    }
-                },
-                modifier = Modifier.testTag("reset_stats_alert_dialog")
-            )
-        }
 
         // Footer version details
         val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
@@ -676,6 +660,44 @@ fun ScheduleTimeAdjuster(
                         }
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun SettingsPermissionRow(title: String, isGranted: Boolean, isDark: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = if (isDark) Color.White else Color(0xFF0F0E17),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (isGranted) "Permission Granted" else "Required",
+                color = if (isGranted) Color(0xFF10B981) else Color(0xFFEF4444),
+                fontSize = 12.sp
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(if (isGranted) Color(0xFF10B981).copy(alpha = 0.12f) else Color(0xFF8B5CF6).copy(alpha = 0.12f))
+                .clickable(onClick = onClick)
+                .padding(vertical = 8.dp, horizontal = 14.dp)
+        ) {
+            Text(
+                text = if (isGranted) "Settings" else "Setup",
+                color = if (isGranted) Color(0xFF10B981) else Color(0xFF8B5CF6),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

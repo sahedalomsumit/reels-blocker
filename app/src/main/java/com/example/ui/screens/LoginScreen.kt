@@ -9,7 +9,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -126,21 +129,14 @@ fun LoginScreen(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
+                    Image(
+                        painter = painterResource(id = R.mipmap.ic_launcher_round),
+                        contentDescription = "Reels Blocker App Icon",
                         modifier = Modifier
                             .size(76.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF0F0E17))
-                            .border(2.dp, Color(0xFF8B5CF6), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = "Reels Blocker Active",
-                            tint = Color(0xFF8B5CF6),
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
+                            .border(2.dp, Color(0xFF8B5CF6), CircleShape)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(28.dp))
@@ -169,12 +165,12 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Reclaim your mind from short-form addiction.\nWe block Reels, Shorts, and TikTok style doomscrolls.",
+                    text = "Reels Blocker stops short-form video content from Facebook Reels, Instagram Reels, YouTube Shorts, and Snapchat Spotlights — all controlled from one simple place.",
                     color = Color(0xFF94A3B8), // Muted dark text
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     textAlign = TextAlign.Center,
-                    lineHeight = 20.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    lineHeight = 18.sp,
+                    modifier = Modifier.padding(horizontal = 24.dp)
                 )
 
                 Spacer(modifier = Modifier.height(48.dp))
@@ -214,9 +210,12 @@ fun LoginScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            Canvas(modifier = Modifier.size(20.dp)) {
-                                drawCircle(color = Color(0xFFEA4335), radius = size.minDimension / 2f)
-                            }
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_google),
+                                contentDescription = "Google Icon",
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.Unspecified
+                            )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
                                 text = "Sign in with Google",

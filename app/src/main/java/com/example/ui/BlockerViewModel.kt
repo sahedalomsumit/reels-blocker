@@ -77,9 +77,7 @@ class BlockerViewModel(private val repository: BlockerRepository) : ViewModel() 
             val plat = platform.lowercase()
             val updated = when {
                 plat == "instagram" -> current.copy(blockInstagram = !current.blockInstagram)
-                plat == "instagram_inbox" -> current.copy(blockInstagramInbox = !current.blockInstagramInbox)
                 plat == "facebook" -> current.copy(blockFacebook = !current.blockFacebook)
-                plat == "facebook_inbox" -> current.copy(blockFacebookInbox = !current.blockFacebookInbox)
                 else -> current
             }
             repository.updateSettings(updated)
@@ -92,11 +90,6 @@ class BlockerViewModel(private val repository: BlockerRepository) : ViewModel() 
         }
     }
 
-    fun resetStatistics() {
-        viewModelScope.launch {
-            repository.resetStats()
-        }
-    }
 }
 
 class BlockerViewModelFactory(private val repository: BlockerRepository) : ViewModelProvider.Factory {
