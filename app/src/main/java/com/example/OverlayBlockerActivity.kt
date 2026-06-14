@@ -91,23 +91,7 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
         repository.addBlockEvent(platformName)
     }
 
-    var isHolding by remember { mutableStateOf(false) }
-    var holdProgress by remember { mutableStateOf(0f) }
 
-    LaunchedEffect(isHolding) {
-        if (isHolding) {
-            val totalTime = 3000L
-            val interval = 50L
-            val steps = (totalTime / interval).toInt()
-            for (i in 1..steps) {
-                delay(interval)
-                holdProgress = i.toFloat() / steps
-            }
-            onGoBack()
-        } else {
-            holdProgress = 0f
-        }
-    }
 
     Box(
         modifier = Modifier
@@ -193,34 +177,16 @@ fun OverlayBlockerScreen(platformName: String, onGoBack: () -> Unit) {
             Spacer(modifier = Modifier.height(28.dp))
 
             // Action Button
-            Box(
+            Button(
+                onClick = onGoBack,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
-                    .clip(RoundedCornerShape(25.dp))
-                    .background(Color(0xFF333333)) // Dark background for the button track
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                isHolding = true
-                                tryAwaitRelease()
-                                isHolding = false
-                            }
-                        )
-                    },
-                contentAlignment = Alignment.Center
+                    .height(50.dp),
+                shape = RoundedCornerShape(25.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))
             ) {
-                // Progress Fill
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(holdProgress)
-                        .fillMaxHeight()
-                        .background(Color(0xFF8B5CF6))
-                        .align(Alignment.CenterStart)
-                )
-
                 Text(
-                    text = if (isHolding) "Hold to unlock... (${(holdProgress * 3).toInt()}s)" else "Hold 3s to Go Back",
+                    text = "Go Back",
                     color = Color.White,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold

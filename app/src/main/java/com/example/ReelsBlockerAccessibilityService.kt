@@ -93,7 +93,7 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
                 when {
                     packageName.contains("instagram") && settings.blockInstagram -> {
                         evaluateReelNodes("Instagram", listOf(
-                            "reel", "Reels", "reels_tab", "clip", "Clips", "Suggested Reels", "reels_view"
+                            "Reels", "reel", "instagram_reels"
                         ))
                     }
                     packageName.contains("facebook") && settings.blockFacebook -> {
