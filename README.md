@@ -17,7 +17,6 @@ Reels Blocker stops short-form video content from Facebook Reels, Instagram Reel
   - **Instagram**: Reels tab, suggested reels, clips, and reel viewers.
   - **YouTube**: Shorts players, shorts tab, and video shelf elements.
   - **Facebook**: Reels tab, watch reels, and suggested short-form videos.
-  - **TikTok**: Complete app-blocking mode (since the FYP is purely short-form).
   - **Snapchat**: Spotlight view and spotlight video players.
 - **🕒 Smart Scheduler (With Overnight Support)**: Set active hours where the blocker is enforced (e.g., bedtime block from `22:00` to `06:00` or work block).
 - **📊 Real-time Stats & Analytics**: Local logging of block events persisted in a secure Room database. View charts and details of which platforms you spend too much time on.
