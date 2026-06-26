@@ -48,6 +48,14 @@ android {
     compose = true
     buildConfig = true
   }
+  packaging {
+    jniLibs {
+      keepDebugSymbols += setOf(
+        "**/libandroidx.graphics.path.so",
+        "**/libdatastore_shared_counter.so"
+      )
+    }
+  }
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
