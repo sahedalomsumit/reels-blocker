@@ -33,6 +33,8 @@ class ReelsBlockerAccessibilityService : AccessibilityService() {
         "com.android.launcher3",
         "com.miui.home",
         "com.sec.android.app.launcher",
+        // YouTube is not a supported platform; explicitly ignore it to prevent accidental blocking
+        "com.google.android.youtube",
     )
 
     override fun onServiceConnected() {
