@@ -54,8 +54,7 @@ fun PlatformsScreen(
     )
 
     val upcomingPlatforms = listOf(
-        PlatformDetails("YouTube", "Shorts", "com.google.android.youtube", false, Color(0xFFFF0000)),
-        PlatformDetails("Snapchat", "Spotlight", "com.snapchat.android", false, Color(0xFFFFFC00))
+        PlatformDetails("YouTube", "Shorts", "com.google.android.youtube", false, Color(0xFFFF0000))
     )
 
     var platformToDisable by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<PlatformDetails?>(null) }

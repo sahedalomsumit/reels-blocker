@@ -6,7 +6,7 @@
 [![Database](https://img.shields.io/badge/Database-Room-00ACC1?style=for-the-badge)](https://developer.android.com/training/data-storage/room)
 [![Cloud Database](https://img.shields.io/badge/Cloud%20Database-Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=white)](https://firebase.google.com/docs/firestore)
 
-Reels Blocker stops short-form video content from Facebook Reels, Instagram Reels, YouTube Shorts, and Snapchat Spotlights — all controlled from one simple place.
+Reels Blocker stops short-form video content from Facebook Reels, Instagram Reels, and YouTube Shorts — all controlled from one simple place.
 
 ---
 
@@ -17,7 +17,6 @@ Reels Blocker stops short-form video content from Facebook Reels, Instagram Reel
   - **Instagram**: Reels tab, suggested reels, clips, and reel viewers.
   - **YouTube**: Shorts players, shorts tab, and video shelf elements.
   - **Facebook**: Reels tab, watch reels, and suggested short-form videos.
-  - **Snapchat**: Spotlight view and spotlight video players.
 - **🕒 Smart Scheduler (With Overnight Support)**: Set active hours where the blocker is enforced (e.g., bedtime block from `22:00` to `06:00` or work block).
 - **📊 Real-time Stats & Analytics**: Local logging of block events persisted in a secure Room database. View charts and details of which platforms you spend too much time on.
 - **🔄 Cloud Sync & Backup**: Seamlessly syncs local settings and block metrics to Cloud Firestore in real-time, allowing you to back up your progress and view consistent statistics across all logged-in devices.
@@ -52,11 +51,14 @@ graph TD
 ```
 
 ### 1. Data Schema
+
 Cloud data is stored per-user in Firebase Firestore using the user's unique authentication ID (`uid`):
+
 - **User Settings**: Saved in a single document `users/{uid}/settings/user_settings`. Syncs preferences like active toggles, scheduler timings, and aggregate stats (e.g., total blocked counts and total estimated time saved).
 - **Block Logs**: Saved in `users/{uid}/block_events/{timestamp}`. Each block event creates a record containing the targeted app/platform and details of the block.
 
 ### 2. Synchronization Strategy
+
 - **Local-First Writes**: When a block occurs, the event is immediately recorded in the local Room database and UI stats update instantly.
 - **Background Cloud Sync**: The app schedules a background coroutine via [FirebaseSyncManager](file:///d:/github/reels-blocker/app/src/main/java/com/example/data/remote/FirebaseSyncManager.kt) to upload the new `BlockEvent` and update the aggregated `UserSettings` in Firestore.
 - **Login Merging**: When a user logs in, [BlockerRepository](file:///d:/github/reels-blocker/app/src/main/java/com/example/data/repository/BlockerRepository.kt):
