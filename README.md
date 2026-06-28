@@ -6,7 +6,7 @@
 [![Database](https://img.shields.io/badge/Database-Room-00ACC1?style=for-the-badge)](https://developer.android.com/training/data-storage/room)
 [![Cloud Database](https://img.shields.io/badge/Cloud%20Database-Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=white)](https://firebase.google.com/docs/firestore)
 
-Reels Blocker stops short-form video content from Facebook Reels, Instagram Reels, and YouTube Shorts — all controlled from one simple place.
+Reels Blocker blocks Facebook Reels, Instagram Reels, and YouTube Shorts — all from one place.
 
 ---
 

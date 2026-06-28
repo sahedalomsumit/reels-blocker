@@ -114,7 +114,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Reels Blocker stops short-form video content from Facebook Reels, Instagram Reels, and YouTube Shorts — all controlled from one simple place.",
+                    text = "Reels Blocker blocks Facebook Reels, Instagram Reels, and YouTube Shorts — all from one place.",
                     color = Color(0xFF94A3B8), // Muted dark text
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
